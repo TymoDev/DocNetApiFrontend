@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../layout/AppShell";
 import TopBar from "../header/TopBar";
 import ChatSidebar from "../sidebar/ChatSidebar";
@@ -6,34 +7,63 @@ import ChatArea from "../chat/ChatArea";
 import Composer from "../composer/Composer";
 import type { ChatMessage } from "../types/chat";
 import { ask } from "../../api/chat";
+import { useUserState } from "../state/userState";
+import { useChatMessages } from "../hooks/useChatMessages";
 
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { chatId: routeChatId } = useParams<{ chatId?: string }>();
+  const { status } = useUserState();
 
-  const onSend = async (text: string) => {
-    setError(null);
+
+  const [pending, setPending] = useState<ChatMessage[]>([]);
+
+  const { data, isLoading, isFetching, error, append, seed } = useChatMessages(routeChatId);
+  const messages = useMemo<ChatMessage[]>(
+    () => (routeChatId ? (data ?? []) : pending),
+    [routeChatId, data, pending]
+  );
+
+  const onSend = async (text: string, files?: File[]) => {
+    const trimmed = text.trim();
+    if (!trimmed && (!files || files.length === 0)) return;
 
     const userMsg: ChatMessage = {
       id: uid(),
       role: "user",
-      content: text,
+      content: trimmed,
       createdAt: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsSending(true);
+
+    if (!routeChatId) setPending((p) => [...p, userMsg]); else append(userMsg);
 
     try {
-      const res = await ask(text); // ← ТЕПЕР об'єкт
+      const res = await ask({
+        chatId: routeChatId ?? null,     // якщо нема id — бек створить чат
+        question: trimmed || null,
+        attachments: files ?? null,
+        filter: null,
+      });
+
+      if (routeChatId && res.chatId !== routeChatId) {
+        console.error("[Chat] ChatId mismatch", { url: routeChatId, response: res.chatId });
+
+        return;
+      }
+
+      if (!routeChatId) {
+        const seeded = [...pending, userMsg];
+        navigate(`/chat/${res.chatId}`, { replace: true });
+        seed(seeded, res.chatId);
+        setPending([]); 
+      }
+
       const assistantMsg: ChatMessage = {
         id: uid(),
         role: "assistant",
-        content: res.answer || "(empty response)", // ← беремо рядок з поля answer
+        content: res.answer || "(empty response)",
         createdAt: new Date().toISOString(),
         meta: {
           context: res.context,
@@ -41,29 +71,36 @@ export default function ChatPage() {
           chunks: res.chunks,
         },
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+
+
+      const targetId = routeChatId ?? res.chatId;
+      if (targetId === routeChatId) append(assistantMsg);
+      else seed([...(data ?? []), ...(pending.length ? pending : []), assistantMsg], targetId);
+
     } catch (e) {
       console.error(e);
-      setError(
-        "Server error: unable to process your request. Please try again."
-      );
       const sysMsg: ChatMessage = {
         id: uid(),
         role: "system",
-        content: "An error occurred while contacting the server.",
+        content: "Server error: unable to process your request.",
         createdAt: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, sysMsg]);
-    } finally {
-      setIsSending(false);
+      if (!routeChatId) setPending((p) => [...p, sysMsg]); else append(sysMsg);
     }
   };
 
   return (
-    <AppShell header={<TopBar />} sidebar={<ChatSidebar />}>
+    <AppShell header={<TopBar showAuthCTA={status !== "authenticated"} />} sidebar={<ChatSidebar />}>
       <div className="h-full min-h-0 flex flex-col">
-        <ChatArea messages={messages} error={error} />
-        <Composer onSend={onSend} isSending={isSending} />
+        <ChatArea
+          messages={messages}
+          error={error ? "Failed to load messages." : null}
+          showAuthCTA={status !== "authenticated"}
+        />
+        <div className="px-4 md:px-8 pb-1 text-[11px] text-neutral-500">
+          {routeChatId ? (isFetching ? "Syncing…" : isLoading ? "Loading…" : "") : "New chat"}
+        </div>
+        <Composer onSend={onSend} isSending={false} />
       </div>
     </AppShell>
   );

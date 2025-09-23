@@ -1,24 +1,20 @@
 import { http } from "./client";
 
-export type AskRequest = {
-  question: string;
-  filter?: Record<string, string> | null;
-};
-
 export type AskChunkWire =
   | { text: string; score: number; metadata: Record<string, string> }
-  | { Text: string; Score: number; Metadata: Record<string, string> }; // на випадок PascalCase
+  | { Text: string; Score: number; Metadata: Record<string, string> };
 
 export type AskResponseWire = {
+  chatId: string; // ← нове поле з беку
   question: string;
   answer: string;
-  context: string; // = ctx.ComposedContext
-  contextChars: number; // = ctx.TotalChars
-  chunks: AskChunkWire[]; // = ctx.Chunks.Select(...)
+  context: string;
+  contextChars: number;
+  chunks: AskChunkWire[];
 };
 
-// Канонічний тип для UI
 export type AskResponse = {
+  chatId: string; // ← канонічно в UI
   question: string;
   answer: string;
   context: string;
@@ -30,6 +26,7 @@ const ASK_ENDPOINT = "/api/ask";
 
 function normalize(res: AskResponseWire): AskResponse {
   return {
+    chatId: (res as any).chatId ?? (res as any).ChatId, // на всякий випадок
     question: res.question,
     answer: res.answer,
     context: res.context,
@@ -42,11 +39,38 @@ function normalize(res: AskResponseWire): AskResponse {
   };
 }
 
-export async function ask(
-  question: string,
-  filter?: Record<string, string>
-): Promise<AskResponse> {
-  const payload: AskRequest = { question, filter };
-  const res = await http.post<AskResponseWire>(ASK_ENDPOINT, payload);
+
+export type AskRequest = {
+  chatId?: string | null;
+  question?: string | null;
+  filter?: Record<string, string> | null;
+  attachments?: File[] | null;
+};
+
+export async function ask({
+  chatId,
+  question = null,
+  filter = null,
+  attachments = null,
+}: AskRequest): Promise<AskResponse> {
+  const form = new FormData();
+
+  if (chatId) form.append("ChatId", chatId);
+  if (question !== null && question !== undefined)
+    form.append("Question", question);
+
+  if (filter) {
+    for (const [k, v] of Object.entries(filter)) {
+      form.append(`Filter[${k}]`, v);
+    }
+  }
+
+  if (attachments) {
+    for (const f of attachments) {
+      form.append("Attachments", f);
+    }
+  }
+
+  const res = await http.post<AskResponseWire>(ASK_ENDPOINT, form);
   return normalize(res.data);
 }

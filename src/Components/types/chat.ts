@@ -21,3 +21,9 @@ export type ChatMessage = {
     chunks?: MessageChunk[];
   };
 };
+export type ChatListItem = {
+  id: string;
+  title?: string | null;
+  lastMessageAt?: string | null;       
+  lastMessagePreview?: string | null;
+};

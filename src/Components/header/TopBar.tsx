@@ -1,32 +1,39 @@
-import { Brain, ChevronDown, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useUserState } from "../state/userState";
 
-export default function TopBar() {
+type TopBarProps = {
+  showAuthCTA?: boolean;
+};
+
+export default function TopBar({ showAuthCTA }: TopBarProps) {
+  const { status } = useUserState();
+  const show = showAuthCTA ?? status !== "authenticated";
+
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-6 py-3 border-b border-white/5 bg-[#0f1322]/80 backdrop-blur">
-      <div className="flex items-center gap-2">
-        <div className="p-2 rounded-xl bg-indigo-500/10">
-          <Brain className="w-5 h-5" />
+    <div className="sticky top-0 z-40 border-b border-white/5 bg-[#0b0e17]/60 backdrop-blur">
+      <div className="mx-auto max-w-7xl px-4 md:px-6 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-indigo-600 grid place-items-center text-white text-sm">🤖</div>
+          <span className="font-semibold">GLP Chat</span>
         </div>
-        <span className="font-semibold">AI Chat</span>
+
+        {show && (
+          <div className="flex items-center gap-2">
+            <Link
+              to="/auth/register"
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm"
+            >
+              Register for free
+            </Link>
+            <Link
+              to="/auth/login"
+              className="px-3 py-1.5 rounded-xl border border-white/10 hover:bg-white/10 text-sm"
+            >
+              Login
+            </Link>
+          </div>
+        )}
       </div>
-
-      {/* модель (макет, без логіки) */}
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm border border-white/10 bg-white/5 hover:bg-white/10"
-        aria-haspopup="listbox"
-        aria-expanded="false"
-      >
-        GPT 4.0 <ChevronDown className="w-4 h-4" />
-      </button>
-
-      <button
-        type="button"
-        className="inline-flex items-center rounded-lg p-2 border border-white/10 bg-white/5 hover:bg-white/10"
-        aria-label="Settings"
-      >
-        <Settings className="w-5 h-5" />
-      </button>
     </div>
   );
 }

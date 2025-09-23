@@ -1,16 +1,20 @@
-import type { ChatMessage } from "../types/chat";
 import WelcomeCard from "./WelcomeCard";
 import MessageList from "./MessageList";
+import type { ChatMessage } from "../types/chat";
 
-type Props = { messages: ChatMessage[]; error?: string | null };
+type Props = {
+  messages: ChatMessage[];
+  error?: string | null;
+  showAuthCTA?: boolean;
+};
 
-export default function ChatArea({ messages, error }: Props) {
+export default function ChatArea({ messages, error, showAuthCTA }: Props) {
   return (
     <div className="h-full min-h-0 w-full flex flex-col">
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-8 py-6">
         {messages.length === 0 ? (
           <div className="max-w-3xl mx-auto">
-            <WelcomeCard />
+            <WelcomeCard showAuthCTA={showAuthCTA} />
           </div>
         ) : (
           <MessageList messages={messages} />

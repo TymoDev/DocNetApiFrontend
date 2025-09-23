@@ -1,5 +1,13 @@
-import ChatPage from "./Components/pages/ChatPage";
+import React from "react";
+import AppRoutes from "../src/Components/Routes/AppRoutes";
+import { UserStateProvider } from "./Components/state/userState";
 
-export default function App() {
-  return <ChatPage />;
-}
+const App: React.FC = () => {
+  return (
+    <UserStateProvider>
+      <AppRoutes />
+    </UserStateProvider>
+  );
+};
+
+export default App;
