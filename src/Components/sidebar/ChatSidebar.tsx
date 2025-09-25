@@ -1,7 +1,8 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useChatList } from "../hooks/useChatList";
+import { useUserState } from "../state/userState";
 
-function fmtDate(iso?: string | null) {
+function fmtDate(iso?: string | number | Date | null) {
   if (!iso) return "";
   try {
     const d = new Date(iso);
@@ -12,7 +13,13 @@ function fmtDate(iso?: string | null) {
 }
 
 export default function ChatSidebar() {
+  const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
+  const { status } = useUserState();
+
+ 
+  if (status !== "authenticated") return null;
+
   const { data, isPending, isFetching, error } = useChatList(1, 50);
 
   return (
@@ -20,8 +27,7 @@ export default function ChatSidebar() {
       <div className="px-3 py-2 border-b border-white/5">
         <button
           className="w-full text-left text-sm rounded-lg px-3 py-2 bg-white/5 hover:bg-white/10"
-          // TODO: зробимо createChat пізніше; поки лінк на /chat (новий чат з першого повідомлення)
-          onClick={() => (window.location.href = "/chat")}
+          onClick={() => navigate("/chat")}
         >
           + New Chat
         </button>
@@ -31,19 +37,12 @@ export default function ChatSidebar() {
         {isPending && (
           <>
             {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="animate-pulse rounded-lg bg-white/5 h-[54px]"
-              />
+              <div key={i} className="animate-pulse rounded-lg bg-white/5 h-[54px]" />
             ))}
           </>
         )}
 
-        {error && (
-          <div className="text-xs text-red-300 p-2">
-            Failed to load chats.
-          </div>
-        )}
+        {error && <div className="text-xs text-red-300 p-2">Failed to load chats.</div>}
 
         {data?.map((c) => {
           const active = chatId === c.id;

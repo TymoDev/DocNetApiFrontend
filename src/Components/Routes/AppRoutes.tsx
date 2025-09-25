@@ -10,7 +10,7 @@ const AppRoutes: React.FC = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/chat" replace />} />
         <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:chatId" element={<ChatPage />} /> {/* ← новий */}
+        <Route path="/chat/:chatId" element={<ChatPage />} />
         <Route path="/auth/*" element={<AuthRoutes />} />
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>

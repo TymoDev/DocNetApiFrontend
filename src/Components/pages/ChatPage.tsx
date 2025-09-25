@@ -17,12 +17,12 @@ export default function ChatPage() {
   const { chatId: routeChatId } = useParams<{ chatId?: string }>();
   const { status } = useUserState();
 
-
   const [pending, setPending] = useState<ChatMessage[]>([]);
 
-  const { data, isLoading, isFetching, error, append, seed } = useChatMessages(routeChatId);
+  const { data, isLoading, isFetching, error, append, seed } =
+    useChatMessages(routeChatId);
   const messages = useMemo<ChatMessage[]>(
-    () => (routeChatId ? (data ?? []) : pending),
+    () => (routeChatId ? data ?? [] : pending),
     [routeChatId, data, pending]
   );
 
@@ -37,18 +37,22 @@ export default function ChatPage() {
       createdAt: new Date().toISOString(),
     };
 
-    if (!routeChatId) setPending((p) => [...p, userMsg]); else append(userMsg);
+    if (!routeChatId) setPending((p) => [...p, userMsg]);
+    else append(userMsg);
 
     try {
       const res = await ask({
-        chatId: routeChatId ?? null,     // якщо нема id — бек створить чат
+        chatId: routeChatId ?? null,
         question: trimmed || null,
         attachments: files ?? null,
         filter: null,
       });
 
       if (routeChatId && res.chatId !== routeChatId) {
-        console.error("[Chat] ChatId mismatch", { url: routeChatId, response: res.chatId });
+        console.error("[Chat] ChatId mismatch", {
+          url: routeChatId,
+          response: res.chatId,
+        });
 
         return;
       }
@@ -57,7 +61,7 @@ export default function ChatPage() {
         const seeded = [...pending, userMsg];
         navigate(`/chat/${res.chatId}`, { replace: true });
         seed(seeded, res.chatId);
-        setPending([]); 
+        setPending([]);
       }
 
       const assistantMsg: ChatMessage = {
@@ -72,11 +76,13 @@ export default function ChatPage() {
         },
       };
 
-
       const targetId = routeChatId ?? res.chatId;
       if (targetId === routeChatId) append(assistantMsg);
-      else seed([...(data ?? []), ...(pending.length ? pending : []), assistantMsg], targetId);
-
+      else
+        seed(
+          [...(data ?? []), ...(pending.length ? pending : []), assistantMsg],
+          targetId
+        );
     } catch (e) {
       console.error(e);
       const sysMsg: ChatMessage = {
@@ -85,12 +91,15 @@ export default function ChatPage() {
         content: "Server error: unable to process your request.",
         createdAt: new Date().toISOString(),
       };
-      if (!routeChatId) setPending((p) => [...p, sysMsg]); else append(sysMsg);
+      if (!routeChatId) setPending((p) => [...p, sysMsg]);
+      else append(sysMsg);
     }
   };
 
   return (
-    <AppShell header={<TopBar showAuthCTA={status !== "authenticated"} />} sidebar={<ChatSidebar />}>
+    <AppShell
+      header={<TopBar showAuthCTA={status !== "authenticated"} />}
+      sidebar={status === "authenticated" ? <ChatSidebar /> : null}>
       <div className="h-full min-h-0 flex flex-col">
         <ChatArea
           messages={messages}
@@ -98,7 +107,13 @@ export default function ChatPage() {
           showAuthCTA={status !== "authenticated"}
         />
         <div className="px-4 md:px-8 pb-1 text-[11px] text-neutral-500">
-          {routeChatId ? (isFetching ? "Syncing…" : isLoading ? "Loading…" : "") : "New chat"}
+          {routeChatId
+            ? isFetching
+              ? "Syncing…"
+              : isLoading
+              ? "Loading…"
+              : ""
+            : "New chat"}
         </div>
         <Composer onSend={onSend} isSending={false} />
       </div>
