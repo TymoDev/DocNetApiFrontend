@@ -1,31 +1,15 @@
-// src/api/auth.ts
 import { http } from "./client";
+import type {
+  RegisterDto,
+  LoginDto,
+  RegisterRespWire,
+  LoginRespWire,
+  RegisterResp,
+  LoginResp,
+} from "../Components/types/auth";
 
-/* ===================== Types (request) ===================== */
+const AUTH = "/api/auth/UserAuth";
 
-export type RegisterDto = {
-  login: string;
-  email: string;
-  password: string;
-  username: string;
-};
-
-export type LoginDto = {
-  login: string;
-  password: string;
-};
-
-/* ===================== Types (response wire) ===================== */
-
-export type RegisterRespWire = { userId: string } | { UserId: string };
-export type LoginRespWire = { login: string } | { Login: string };
-
-/* ===================== Types (normalized) ===================== */
-
-export type RegisterResp = { userId: string };
-export type LoginResp = { login: string };
-
-/* ===================== Helpers ===================== */
 
 function toRegisterWire(dto: RegisterDto) {
   return {
@@ -35,6 +19,7 @@ function toRegisterWire(dto: RegisterDto) {
     Username: dto.username,
   };
 }
+
 function toLoginWire(dto: LoginDto) {
   return { Login: dto.login, Password: dto.password };
 }
@@ -42,38 +27,31 @@ function toLoginWire(dto: LoginDto) {
 function normalizeRegister(res: RegisterRespWire): RegisterResp {
   return { userId: (res as any).userId ?? (res as any).UserId };
 }
+
 function normalizeLogin(res: LoginRespWire): LoginResp {
   return { login: (res as any).login ?? (res as any).Login };
 }
 
-/* ===================== Endpoints ===================== */
-
-const AUTH = "/api/auth/UserAuth";
-
-/** POST /api/auth/UserAuth/register -> { userId: guid } */
+/** POST /api/auth/UserAuth/register -> { userId } */
 export async function register(dto: RegisterDto): Promise<RegisterResp> {
-  const res = await http.post<RegisterRespWire>(
-    `${AUTH}/register`,
-    toRegisterWire(dto),
-    {
-      withCredentials: true,
-    }
-  );
+  const res = await http.post<RegisterRespWire>(`${AUTH}/register`, toRegisterWire(dto), {
+    withCredentials: true,
+  });
   return normalizeRegister(res.data);
 }
 
-/** POST /api/auth/UserAuth/login -> { login: string } */
+/** POST /api/auth/UserAuth/login -> { login } */
 export async function login(dto: LoginDto): Promise<LoginResp> {
-  const res = await http.post<LoginRespWire>(
-    `${AUTH}/login`,
-    toLoginWire(dto),
-    {
-      withCredentials: true,
-    }
-  );
+  const res = await http.post<LoginRespWire>(`${AUTH}/login`, toLoginWire(dto), {
+    withCredentials: true,
+  });
   return normalizeLogin(res.data);
 }
 
+/**
+ * POST /api/auth/UserAuth — без тіла; лише кука з токеном.
+ * Якщо відповідь НЕ 401 — користувач авторизований.
+ */
 export async function checkAuth(): Promise<boolean> {
   try {
     await http.post(`${AUTH}`, null, { withCredentials: true });
@@ -83,3 +61,4 @@ export async function checkAuth(): Promise<boolean> {
     throw e;
   }
 }
+

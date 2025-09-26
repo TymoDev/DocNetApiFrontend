@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
 import type { RegisterDto } from "../../types/auth";
+import { register as registerApi } from "../../../api/auth";
+import { useUserState } from "../../state/userState"; // за потреби змініть шлях
 
 const registerSchema = z.object({
   login: z.string().trim().min(3, "Login is too short").max(50),
@@ -13,9 +15,10 @@ const registerSchema = z.object({
   username: z.string().trim().min(2, "Username is too short").max(60),
 });
 
-type Props = { onSubmit?: (dto: RegisterDto) => Promise<void> | void };
+export default function RegisterPage() {
+  const navigate = useNavigate();
+  const { setStatus } = useUserState();
 
-export default function RegisterPage({ onSubmit }: Props) {
   const {
     register,
     handleSubmit,
@@ -29,10 +32,12 @@ export default function RegisterPage({ onSubmit }: Props) {
     try {
       setLoading(true);
       setError(null);
-      if (onSubmit) await onSubmit(data);
-      else console.log("[Register demo]", data);
+
+      await registerApi(data);
+      setStatus("authenticated");           
+      navigate("/chat", { replace: true });  
     } catch (e: any) {
-      setError(e?.message || "Registration failed");
+      setError(e?.response?.data.error || "Registration failed");
     } finally {
       setLoading(false);
     }

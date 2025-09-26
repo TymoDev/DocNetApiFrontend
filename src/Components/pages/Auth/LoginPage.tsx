@@ -2,19 +2,22 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
 import type { LoginDto } from "../../types/auth";
+import { login as loginApi } from "../../../api/auth";
+import { useUserState } from "../../state/userState"; // за потреби змініть шлях
 
-// рантайм-валідація під LoginDto
+
 const loginSchema = z.object({
   login: z.string().trim().min(3, "Login is too short").max(50),
   password: z.string().min(6, "Password is too short"),
 });
 
-type Props = { onSubmit?: (dto: LoginDto) => Promise<void> | void };
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const { setStatus } = useUserState();
 
-export default function LoginPage({ onSubmit }: Props) {
   const {
     register,
     handleSubmit,
@@ -28,10 +31,12 @@ export default function LoginPage({ onSubmit }: Props) {
     try {
       setLoading(true);
       setError(null);
-      if (onSubmit) await onSubmit(data);
-      else console.log("[Login demo]", data);
+
+      await loginApi(data);
+      setStatus("authenticated");         
+      navigate("/chat", { replace: true }); 
     } catch (e: any) {
-      setError(e?.message || "Login failed");
+      setError(e?.response?.data?.error || "Login failed");
     } finally {
       setLoading(false);
     }
