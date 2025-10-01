@@ -8,10 +8,15 @@ type Props = {
   messages: ChatMessage[];
   error?: string | null;
   showAuthCTA?: boolean;
-  isWaiting?: boolean; // тільки це потрібно
+  isWaiting?: boolean;
 };
 
-export default function ChatArea({ messages, error, showAuthCTA, isWaiting = false }: Props) {
+export default function ChatArea({
+  messages,
+  error,
+  showAuthCTA,
+  isWaiting = false,
+}: Props) {
   const typingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -10,3 +10,9 @@ body,
 body {
   @apply bg-neutral-50 text-neutral-900 dark:bg-[#0b0e17] dark:text-neutral-100;
 }
+.chat-text-cursor,
+.chat-text-cursor * {
+  cursor: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
