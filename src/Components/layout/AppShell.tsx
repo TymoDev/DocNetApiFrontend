@@ -46,7 +46,6 @@ export default function AppShell({
         </footer>
       ) : null}
 
-      {/* FAB знизу зліва тільки для авторизованих */}
       {status === "authenticated" && <AccountFab />}
     </div>
   );

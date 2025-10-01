@@ -21,13 +21,15 @@ export default function ChatPage() {
 
   const queryClient = useQueryClient();
   const cancelTypingRef = useRef<(() => void) | null>(null);
+  const animatingChatIdRef = useRef<string | null>(null);
 
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [pending, setPending] = useState<ChatMessage[]>([]);
 
+  const suspend = !!routeChatId && isTyping && animatingChatIdRef.current === routeChatId;
   const { data, isLoading, isFetching, error, append, seed } =
-    useChatMessages(routeChatId);
+    useChatMessages(routeChatId, { suspend, page: 1, pageSize: 50 });
 
   const messages = useMemo<ChatMessage[]>(
     () => (routeChatId ? data ?? [] : pending),
@@ -38,19 +40,14 @@ export default function ChatPage() {
     return () => {
       cancelTypingRef.current?.();
       cancelTypingRef.current = null;
-      setIsTyping(false);
+      animatingChatIdRef.current = null;
     };
-  }, [routeChatId]);
+  }, []);
 
-  const updateAssistantContent = (
-    targetChatId: string,
-    msgId: string,
-    content: string
-  ) => {
+  const updateAssistantContent = (targetChatId: string, msgId: string, content: string) => {
     queryClient.setQueriesData<ChatMessage[]>(
-      { queryKey: ["chat", "messages", targetChatId] },
-      (old) =>
-        old ? old.map((m) => (m.id === msgId ? { ...m, content } : m)) : old
+      { queryKey: ["chat", "messages", targetChatId, 1, 50] as const },
+      (old) => (old ? old.map((m) => (m.id === msgId ? { ...m, content } : m)) : old)
     );
   };
 
@@ -79,7 +76,6 @@ export default function ChatPage() {
     setIsSending(true);
     try {
       const isAuth = status === "authenticated";
-
       const res = isAuth
         ? await ask({
             chatId: routeChatId ?? null,
@@ -93,10 +89,7 @@ export default function ChatPage() {
           });
 
       if (isAuth && routeChatId && res.chatId !== routeChatId) {
-        console.error("[Chat] ChatId mismatch", {
-          url: routeChatId,
-          response: res.chatId,
-        });
+        console.error("[Chat] ChatId mismatch", { url: routeChatId, response: res.chatId });
         return;
       }
 
@@ -115,7 +108,6 @@ export default function ChatPage() {
 
       if (!isAuth) {
         setPending((prev) => [...prev, assistantBase]);
-
         setIsTyping(true);
         const { cancel, done } = typewriter(
           res.answer || "",
@@ -132,10 +124,8 @@ export default function ChatPage() {
         const targetId = res.chatId!;
         const initial = [...pending, userMsg, assistantBase];
 
-        navigate(`/chat/${targetId}`, { replace: true });
         seed(initial, targetId);
-        setPending([]);
-
+        animatingChatIdRef.current = targetId;
         setIsTyping(true);
         const { cancel, done } = typewriter(
           res.answer || "",
@@ -143,22 +133,29 @@ export default function ChatPage() {
           14
         );
         cancelTypingRef.current = cancel;
+
+        navigate(`/chat/${targetId}`, { replace: true });
+
         await done;
         setIsTyping(false);
+        animatingChatIdRef.current = null;
+        queryClient.invalidateQueries({ queryKey: ["chat", "messages", targetId, 1, 50] as const });
         return;
       }
 
       append(assistantBase);
+      animatingChatIdRef.current = routeChatId!;
       setIsTyping(true);
-      const currentId = routeChatId!;
       const { cancel, done } = typewriter(
         res.answer || "",
-        (partial) => updateAssistantContent(currentId, assistantId, partial),
+        (partial) => updateAssistantContent(routeChatId!, assistantId, partial),
         14
       );
       cancelTypingRef.current = cancel;
       await done;
       setIsTyping(false);
+      animatingChatIdRef.current = null;
+      queryClient.invalidateQueries({ queryKey: ["chat", "messages", routeChatId!, 1, 50] as const });
     } catch (e) {
       console.error(e);
       const sysMsg: ChatMessage = {
@@ -177,7 +174,8 @@ export default function ChatPage() {
   return (
     <AppShell
       header={<TopBar showAuthCTA={status !== "authenticated"} />}
-      sidebar={status === "authenticated" ? <ChatSidebar /> : null}>
+      sidebar={status === "authenticated" ? <ChatSidebar /> : null}
+    >
       <div className="h-full min-h-0 flex flex-col">
         <ChatArea
           messages={messages}
@@ -186,15 +184,9 @@ export default function ChatPage() {
           isWaiting={isSending && !isTyping}
         />
         <div className="px-4 md:px-8 pb-1 text-[11px] text-neutral-500">
-          {routeChatId
-            ? isFetching
-              ? "Syncing…"
-              : isLoading
-              ? "Loading…"
-              : ""
-            : "New chat"}
+          {routeChatId ? (isFetching ? "Syncing…" : isLoading ? "Loading…" : "") : "New chat"}
         </div>
-        <Composer onSend={onSend} isSending={isSending} />
+        <Composer onSend={onSend} isSending={isSending || isTyping} />
       </div>
     </AppShell>
   );
