@@ -6,7 +6,8 @@ export default function WelcomeCard({ showAuthCTA = false }: { showAuthCTA?: boo
       <div className="w-10 h-10 mx-auto rounded-xl bg-white/10 grid place-items-center mb-3">🤖</div>
       <h2 className="text-lg font-semibold">Welcome to AI Chat</h2>
       <p className="text-sm text-neutral-400 mt-1">
-        Start chatting instantly — no login required. This app uses available AI models with smart fallback.
+        Start chatting instantly — no login required. This app uses available AI models with smart fallback. 
+        Without authentication, AI will not remember the chat history, and each request will be processed without knowledge of others
       </p>
 
       {showAuthCTA && (

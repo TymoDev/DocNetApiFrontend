@@ -10,7 +10,6 @@ import type {
 
 const AUTH = "/api/auth/UserAuth";
 
-
 function toRegisterWire(dto: RegisterDto) {
   return {
     Login: dto.login,
@@ -34,17 +33,25 @@ function normalizeLogin(res: LoginRespWire): LoginResp {
 
 /** POST /api/auth/UserAuth/register -> { userId } */
 export async function register(dto: RegisterDto): Promise<RegisterResp> {
-  const res = await http.post<RegisterRespWire>(`${AUTH}/register`, toRegisterWire(dto), {
-    withCredentials: true,
-  });
+  const res = await http.post<RegisterRespWire>(
+    `${AUTH}/register`,
+    toRegisterWire(dto),
+    {
+      withCredentials: true,
+    }
+  );
   return normalizeRegister(res.data);
 }
 
 /** POST /api/auth/UserAuth/login -> { login } */
 export async function login(dto: LoginDto): Promise<LoginResp> {
-  const res = await http.post<LoginRespWire>(`${AUTH}/login`, toLoginWire(dto), {
-    withCredentials: true,
-  });
+  const res = await http.post<LoginRespWire>(
+    `${AUTH}/login`,
+    toLoginWire(dto),
+    {
+      withCredentials: true,
+    }
+  );
   return normalizeLogin(res.data);
 }
 
@@ -62,3 +69,6 @@ export async function checkAuth(): Promise<boolean> {
   }
 }
 
+export async function logout(): Promise<void> {
+  await http.post(`${AUTH}/logout`);
+}

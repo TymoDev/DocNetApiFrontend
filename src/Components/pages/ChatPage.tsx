@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../layout/AppShell";
 import TopBar from "../header/TopBar";
@@ -6,9 +6,11 @@ import ChatSidebar from "../sidebar/ChatSidebar";
 import ChatArea from "../chat/ChatArea";
 import Composer from "../composer/Composer";
 import type { ChatMessage } from "../types/chat";
-import { ask } from "../../api/chat";
+import { ask, askAnonymous } from "../../api/chat";
 import { useUserState } from "../state/userState";
 import { useChatMessages } from "../hooks/useChatMessages";
+import { useQueryClient } from "@tanstack/react-query";
+import { typewriter } from "../utilits/typewriter";
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -17,18 +19,52 @@ export default function ChatPage() {
   const { chatId: routeChatId } = useParams<{ chatId?: string }>();
   const { status } = useUserState();
 
+  const queryClient = useQueryClient();
+  const cancelTypingRef = useRef<(() => void) | null>(null);
+
+  const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [pending, setPending] = useState<ChatMessage[]>([]);
 
   const { data, isLoading, isFetching, error, append, seed } =
     useChatMessages(routeChatId);
+
   const messages = useMemo<ChatMessage[]>(
     () => (routeChatId ? data ?? [] : pending),
     [routeChatId, data, pending]
   );
 
+  useEffect(() => {
+    return () => {
+      cancelTypingRef.current?.();
+      cancelTypingRef.current = null;
+      setIsTyping(false);
+    };
+  }, [routeChatId]);
+
+  const updateAssistantContent = (
+    targetChatId: string,
+    msgId: string,
+    content: string
+  ) => {
+    queryClient.setQueriesData<ChatMessage[]>(
+      { queryKey: ["chat", "messages", targetChatId] },
+      (old) =>
+        old ? old.map((m) => (m.id === msgId ? { ...m, content } : m)) : old
+    );
+  };
+
+  const updatePendingAssistantContent = (msgId: string, content: string) => {
+    setPending((p) => p.map((m) => (m.id === msgId ? { ...m, content } : m)));
+  };
+
   const onSend = async (text: string, files?: File[]) => {
     const trimmed = text.trim();
     if (!trimmed && (!files || files.length === 0)) return;
+
+    cancelTypingRef.current?.();
+    cancelTypingRef.current = null;
+    setIsTyping(false);
 
     const userMsg: ChatMessage = {
       id: uid(),
@@ -40,34 +76,35 @@ export default function ChatPage() {
     if (!routeChatId) setPending((p) => [...p, userMsg]);
     else append(userMsg);
 
+    setIsSending(true);
     try {
-      const res = await ask({
-        chatId: routeChatId ?? null,
-        question: trimmed || null,
-        attachments: files ?? null,
-        filter: null,
-      });
+      const isAuth = status === "authenticated";
 
-      if (routeChatId && res.chatId !== routeChatId) {
+      const res = isAuth
+        ? await ask({
+            chatId: routeChatId ?? null,
+            question: trimmed || null,
+            attachments: files ?? null,
+            filter: null,
+          })
+        : await askAnonymous({
+            question: trimmed || null,
+            filter: null,
+          });
+
+      if (isAuth && routeChatId && res.chatId !== routeChatId) {
         console.error("[Chat] ChatId mismatch", {
           url: routeChatId,
           response: res.chatId,
         });
-
         return;
       }
 
-      if (!routeChatId) {
-        const seeded = [...pending, userMsg];
-        navigate(`/chat/${res.chatId}`, { replace: true });
-        seed(seeded, res.chatId);
-        setPending([]);
-      }
-
-      const assistantMsg: ChatMessage = {
-        id: uid(),
+      const assistantId = uid();
+      const assistantBase: ChatMessage = {
+        id: assistantId,
         role: "assistant",
-        content: res.answer || "(empty response)",
+        content: "",
         createdAt: new Date().toISOString(),
         meta: {
           context: res.context,
@@ -76,13 +113,52 @@ export default function ChatPage() {
         },
       };
 
-      const targetId = routeChatId ?? res.chatId;
-      if (targetId === routeChatId) append(assistantMsg);
-      else
-        seed(
-          [...(data ?? []), ...(pending.length ? pending : []), assistantMsg],
-          targetId
+      if (!isAuth) {
+        setPending((prev) => [...prev, assistantBase]);
+
+        setIsTyping(true);
+        const { cancel, done } = typewriter(
+          res.answer || "",
+          (partial) => updatePendingAssistantContent(assistantId, partial),
+          14
         );
+        cancelTypingRef.current = cancel;
+        await done;
+        setIsTyping(false);
+        return;
+      }
+
+      if (!routeChatId) {
+        const targetId = res.chatId!;
+        const initial = [...pending, userMsg, assistantBase];
+
+        navigate(`/chat/${targetId}`, { replace: true });
+        seed(initial, targetId);
+        setPending([]);
+
+        setIsTyping(true);
+        const { cancel, done } = typewriter(
+          res.answer || "",
+          (partial) => updateAssistantContent(targetId, assistantId, partial),
+          14
+        );
+        cancelTypingRef.current = cancel;
+        await done;
+        setIsTyping(false);
+        return;
+      }
+
+      append(assistantBase);
+      setIsTyping(true);
+      const currentId = routeChatId!;
+      const { cancel, done } = typewriter(
+        res.answer || "",
+        (partial) => updateAssistantContent(currentId, assistantId, partial),
+        14
+      );
+      cancelTypingRef.current = cancel;
+      await done;
+      setIsTyping(false);
     } catch (e) {
       console.error(e);
       const sysMsg: ChatMessage = {
@@ -93,6 +169,8 @@ export default function ChatPage() {
       };
       if (!routeChatId) setPending((p) => [...p, sysMsg]);
       else append(sysMsg);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -105,6 +183,7 @@ export default function ChatPage() {
           messages={messages}
           error={error ? "Failed to load messages." : null}
           showAuthCTA={status !== "authenticated"}
+          isWaiting={isSending && !isTyping}
         />
         <div className="px-4 md:px-8 pb-1 text-[11px] text-neutral-500">
           {routeChatId
@@ -115,7 +194,7 @@ export default function ChatPage() {
               : ""
             : "New chat"}
         </div>
-        <Composer onSend={onSend} isSending={false} />
+        <Composer onSend={onSend} isSending={isSending} />
       </div>
     </AppShell>
   );

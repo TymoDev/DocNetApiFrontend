@@ -5,7 +5,7 @@ export type AskChunkWire =
   | { Text: string; Score: number; Metadata: Record<string, string> };
 
 export type AskResponseWire = {
-  chatId: string; // ← нове поле з беку
+  chatId: string; 
   question: string;
   answer: string;
   context: string;
@@ -14,7 +14,7 @@ export type AskResponseWire = {
 };
 
 export type AskResponse = {
-  chatId: string; // ← канонічно в UI
+  chatId: string | null; 
   question: string;
   answer: string;
   context: string;
@@ -26,7 +26,7 @@ const ASK_ENDPOINT = "/api/ask";
 
 function normalize(res: AskResponseWire): AskResponse {
   return {
-    chatId: (res as any).chatId ?? (res as any).ChatId, // на всякий випадок
+    chatId: (res as any).chatId ?? (res as any).ChatId, 
     question: res.question,
     answer: res.answer,
     context: res.context,
@@ -73,4 +73,33 @@ export async function ask({
 
   const res = await http.post<AskResponseWire>(ASK_ENDPOINT, form);
   return normalize(res.data);
+}
+
+export type AskAnonymousRequest = {
+  question?: string | null;
+  filter?: Record<string, string> | null;
+};
+
+export async function askAnonymous({
+  question = null,
+  filter = null,
+}: AskAnonymousRequest): Promise<AskResponse> {
+  const form = new FormData();
+  if (question) form.append("Question", question);
+  if (filter) for (const [k, v] of Object.entries(filter)) form.append(`Filter[${k}]`, v);
+
+  const res = await http.post<any>("/api/ask/anonymous", form);
+
+  return {
+    chatId: null,                                  
+    question: res.data.question,
+    answer: res.data.answer,
+    context: res.data.composedContext,              
+    contextChars: res.data.totalChars,              
+    chunks: (res.data.values ?? []).map((c: any) => ({
+      text: c.text,
+      score: c.score,
+      metadata: c.metadata,
+    })),
+  };
 }

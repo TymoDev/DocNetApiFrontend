@@ -1,14 +1,23 @@
 import WelcomeCard from "./WelcomeCard";
 import MessageList from "./MessageList";
+import TypingBubble from "../utilits/TypingBubble";
+import { useEffect, useRef } from "react";
 import type { ChatMessage } from "../types/chat";
 
 type Props = {
   messages: ChatMessage[];
   error?: string | null;
   showAuthCTA?: boolean;
+  isWaiting?: boolean; // тільки це потрібно
 };
 
-export default function ChatArea({ messages, error, showAuthCTA }: Props) {
+export default function ChatArea({ messages, error, showAuthCTA, isWaiting = false }: Props) {
+  const typingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isWaiting) typingRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [isWaiting]);
+
   return (
     <div className="h-full min-h-0 w-full flex flex-col">
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-8 py-6">
@@ -18,6 +27,13 @@ export default function ChatArea({ messages, error, showAuthCTA }: Props) {
           </div>
         ) : (
           <MessageList messages={messages} />
+        )}
+
+        {isWaiting && (
+          <div className="max-w-3xl mx-auto mt-2">
+            <TypingBubble />
+            <div ref={typingRef} />
+          </div>
         )}
 
         {error && (
