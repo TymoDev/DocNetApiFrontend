@@ -24,6 +24,25 @@ export type ChatMessage = {
 export type ChatListItem = {
   id: string;
   title?: string | null;
-  lastMessageAt?: string | null;       
+  lastMessageAt?: string | null;
   lastMessagePreview?: string | null;
 };
+
+export type ChatListItemWire =
+  | {
+      id?: string;
+      title?: string | null;
+      lastMessageAt?: string | Date | null;
+      lastMessagePreview?: string | null;
+    }
+  | {
+      Id?: string;
+      Title?: string | null;
+      LastMessageAt?: string | Date | null;
+      LastMessagePreview?: string | null;
+    };
+
+export type ChatPatchRequest = {
+  title: string;
+};
+export type ChatId = string;
