@@ -16,6 +16,15 @@ import AccountFab from "../account/AccountFab";
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
+// safely read HTTP status from unknown error (supports axios errors too)
+function getHttpStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== "object") return undefined;
+  const e: any = err;
+  if (typeof e?.response?.status === "number") return e.response.status;
+  if (typeof e?.status === "number") return e.status;
+  return undefined;
+}
+
 export default function ChatPage() {
   const navigate = useNavigate();
   const { chatId: routeChatId } = useParams<{ chatId?: string }>();
@@ -192,17 +201,20 @@ export default function ChatPage() {
     }
   };
 
+  const statusCode = getHttpStatus(error);
+  const errorText =
+    error ? (statusCode === 401 ? null : "Failed to load messages.") : null;
+
   return (
     <>
       <AppShell
         header={<TopBar showAuthCTA={status !== "authenticated"} />}
-        sidebar={status === "authenticated" ? <ChatSidebar /> : null}>
+        sidebar={status === "authenticated" ? <ChatSidebar /> : null}
+      >
         <div className="h-full min-h-0 flex flex-col">
           <ChatArea
             messages={messages}
-            error={
-              error && error.status !== 401 ? "Failed to load messages." : null
-            }
+            error={errorText}
             showAuthCTA={status !== "authenticated"}
             isWaiting={isSending && !isTyping}
           />
