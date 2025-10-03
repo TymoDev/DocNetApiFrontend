@@ -1,69 +1,69 @@
-# React + TypeScript + Vite
+GLP Chat — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Minimal chat UI for a .NET (RAG) backend.
+Stack: React 19, TypeScript, Vite, Tailwind, TanStack Query 5, React Router 7, axios, zustand, react-hook-form, zod, lucide-react.
 
-Currently, two official plugins are available:
+What’s included
+•Routes:
+  /chat — new/guest chat (ephemeral, not persisted)
+  /chat/:chatId — existing chat (history comes from the backend)
+•Auth: cookie-based; the token is stored in cookies; axios sends it automatically (withCredentials).
+•Guest mode: chat without login; history lives only in page state (not saved on backend).
+•Chat UX: typewriter answer rendering, “Assistant is typing…” indicator, auto-scroll, input lock while sending/typing.
+•Chats sidebar: visible only for authenticated users.
+•Account FAB: top-right — Upgrade plan / Personalization / Settings / Logout.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Quick start
 
-## Expanding the ESLint configuration
+1.Install deps:
+npm install
+2.Create .env.development with:
+VITE_API_URL=http://localhost:5119
+3.Run:
+npm run dev (app at http://localhost:5173)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+API
+All backend calls are encapsulated in src/api.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Project structure (short)
+src/
+├─ api/
+│ ├─ client.ts (axios: baseURL from env, withCredentials)
+│ ├─ chat.ts (ask / askAnonymous + normalization)
+│ ├─ chatList.ts (chat list)
+│ ├─ getChat.ts (chat messages)
+│ └─ auth.ts (login / register / checkAuth / logout)
+├─ Components/
+│ ├─ Routes/AppRoutes.tsx
+│ ├─ pages/ChatPage.tsx
+│ ├─ layout/AppShell.tsx
+│ ├─ header/TopBar.tsx
+│ ├─ sidebar/ChatSidebar.tsx
+│ ├─ composer/Composer.tsx
+│ ├─ account/AccountFab.tsx
+│ ├─ chat/
+│ │ ├─ ChatArea.tsx
+│ │ ├─ MessageList.tsx
+│ │ ├─ MessageBubble.tsx
+│ │ └─ WelcomeCard.tsx
+│ ├─ hooks/
+│ │ ├─ useChatList.ts
+│ │ └─ useChatMessages.ts
+│ ├─ utilits/
+│ │ ├─ TypingBubble.tsx
+│ │ └─ typewriter.ts
+│ └─ state/userState.tsx
+├─ main.tsx
+├─ Root.tsx
+├─ index.css
+└─ App.tsx
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+Behavior
+On /chat without chatId, the frontend sends ChatId=null, receives a new chatId, navigates to /chat/{chatId}, and seeds the cache to avoid flicker.
+While awaiting a reply: show TypingBubble, lock Composer, render text gradually (typewriter), then unlock input.
+In guest mode: messages render and persist only within the current session (no backend history).
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Scripts
+npm run dev
+npm run build
+npm run preview

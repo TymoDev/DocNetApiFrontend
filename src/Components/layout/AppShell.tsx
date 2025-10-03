@@ -5,6 +5,7 @@ type AppShellProps = {
   sidebar?: ReactNode | null;
   children: ReactNode;
   footer?: ReactNode;
+  fab?: ReactNode;
 };
 
 export default function AppShell({
@@ -12,6 +13,7 @@ export default function AppShell({
   sidebar,
   children,
   footer,
+  fab,
 }: AppShellProps) {
   const hasSidebar = !!sidebar;
 
@@ -21,8 +23,7 @@ export default function AppShell({
         hasSidebar
           ? "h-dvh grid grid-rows-[auto_minmax(0,1fr)_auto] grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)]"
           : "h-dvh grid grid-rows-[auto_minmax(0,1fr)_auto] grid-cols-1"
-      }
-    >
+      }>
       <header className={hasSidebar ? "md:col-span-2" : undefined}>
         {header}
       </header>
@@ -42,6 +43,8 @@ export default function AppShell({
           {footer}
         </footer>
       ) : null}
+
+      {fab}
     </div>
   );
 }

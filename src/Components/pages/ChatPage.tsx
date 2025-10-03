@@ -1,3 +1,4 @@
+// src/Components/pages/ChatPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../layout/AppShell";
@@ -11,6 +12,7 @@ import { useUserState } from "../state/userState";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useQueryClient } from "@tanstack/react-query";
 import { typewriter } from "../utilits/typewriter";
+import AccountFab from "../account/AccountFab";
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -29,6 +31,7 @@ export default function ChatPage() {
 
   const suspend =
     !!routeChatId && isTyping && animatingChatIdRef.current === routeChatId;
+
   const { data, isLoading, isFetching, error, append, seed } = useChatMessages(
     routeChatId,
     { suspend, page: 1, pageSize: 50 }
@@ -137,6 +140,7 @@ export default function ChatPage() {
 
         seed(initial, targetId);
         animatingChatIdRef.current = targetId;
+
         setIsTyping(true);
         const { cancel, done } = typewriter(
           res.answer || "",
@@ -150,6 +154,7 @@ export default function ChatPage() {
         await done;
         setIsTyping(false);
         animatingChatIdRef.current = null;
+
         queryClient.invalidateQueries({
           queryKey: ["chat", "messages", targetId, 1, 50] as const,
         });
@@ -168,6 +173,7 @@ export default function ChatPage() {
       await done;
       setIsTyping(false);
       animatingChatIdRef.current = null;
+
       queryClient.invalidateQueries({
         queryKey: ["chat", "messages", routeChatId!, 1, 50] as const,
       });
@@ -187,33 +193,39 @@ export default function ChatPage() {
   };
 
   return (
-    <AppShell
-      header={<TopBar showAuthCTA={status !== "authenticated"} />}
-      sidebar={status === "authenticated" ? <ChatSidebar /> : null}>
-      <div className="h-full min-h-0 flex flex-col">
-        <ChatArea
-          messages={messages}
-          error={
-            error && error.status !== 401 ? "Failed to load messages." : null
-          }
-          showAuthCTA={status !== "authenticated"}
-          isWaiting={isSending && !isTyping}
-        />
-        <div className="px-4 md:px-8 pb-1 text-[11px] text-neutral-500">
-          {routeChatId
-            ? isFetching
-              ? "Syncing…"
-              : isLoading
-              ? "Loading…"
-              : ""
-            : "New chat"}
+    <>
+      <AppShell
+        header={<TopBar showAuthCTA={status !== "authenticated"} />}
+        sidebar={status === "authenticated" ? <ChatSidebar /> : null}>
+        <div className="h-full min-h-0 flex flex-col">
+          <ChatArea
+            messages={messages}
+            error={
+              error && error.status !== 401 ? "Failed to load messages." : null
+            }
+            showAuthCTA={status !== "authenticated"}
+            isWaiting={isSending && !isTyping}
+          />
+
+          <div className="px-4 md:px-8 pb-1 text-[11px] text-neutral-500">
+            {routeChatId
+              ? isFetching
+                ? "Syncing…"
+                : isLoading
+                ? "Loading…"
+                : ""
+              : "New chat"}
+          </div>
+
+          <Composer
+            key={routeChatId ?? "new"}
+            onSend={onSend}
+            isSending={isSending || isTyping}
+          />
         </div>
-        <Composer
-          key={routeChatId ?? "new"}
-          onSend={onSend}
-          isSending={isSending || isTyping}
-        />
-      </div>
-    </AppShell>
+      </AppShell>
+
+      <AccountFab />
+    </>
   );
 }
