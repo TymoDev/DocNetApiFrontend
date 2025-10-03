@@ -16,7 +16,6 @@ function fmtDate(iso?: string | number | Date | null) {
   }
 }
 
-// Ключі з getQueriesData мають бути readonly unknown[]
 type Snapshot = Array<[readonly unknown[], unknown]>;
 
 function patchChatsCache(
@@ -106,15 +105,15 @@ export default function ChatSidebar() {
   });
 
   const askRename = (c: ChatListItem) => {
-    const current = c.title ?? "Без назви";
-    const title = window.prompt("Нова назва чату:", current)?.trim();
+    const current = c.title ?? "Untitled chat";
+    const title = window.prompt("New name:", current)?.trim();
     if (!title || title === current) return;
     setMenuFor(null);
     renameMut.mutate({ id: c.id, title });
   };
 
   const askDelete = (c: ChatListItem) => {
-    if (!window.confirm("Видалити цей чат? Дію не можна скасувати.")) return;
+    if (!window.confirm("Delete this chat? This action cannot be undone.")) return;
     setMenuFor(null);
     deleteMut.mutate(c.id);
   };

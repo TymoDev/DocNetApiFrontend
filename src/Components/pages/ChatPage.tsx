@@ -237,7 +237,7 @@ export default function ChatPage() {
         </div>
       </AppShell>
 
-      <AccountFab />
+      {status === "authenticated" && <AccountFab />}
     </>
   );
 }

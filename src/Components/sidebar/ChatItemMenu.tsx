@@ -27,14 +27,14 @@ export default function ChatItemMenu({ onRename, onDelete, onClose }: Props) {
         className="w-full px-3 py-2 text-left text-sm hover:bg-white/10"
         onClick={() => { onRename(); onClose(); }}
       >
-        Перейменувати
+        Rename
       </button>
       <div className="mx-2 my-1 h-px bg-white/10" />
       <button
         className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10"
         onClick={() => { onDelete(); onClose(); }}
       >
-        Видалити
+        Delete
       </button>
     </div>
   );
