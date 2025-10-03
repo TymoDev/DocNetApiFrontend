@@ -6,25 +6,31 @@ Stack: React 19, TypeScript, Vite, Tailwind, TanStack Query 5, React Router 7, a
 ## What’s included
 
 ### Routes
-- `/chat` — new/guest chat (ephemeral, not persisted)  
+
+- `/chat` — new/guest chat (ephemeral, not persisted)
 - `/chat/:chatId` — existing chat (history comes from the backend)
 
 ### Auth
+
 - Cookie-based; the token is stored in cookies; axios sends it automatically (`withCredentials`).
 
 ### Guest mode
+
 - Chat without login; history lives only in page state (not saved on backend).
 
 ### Chat UX
-- Typewriter answer rendering  
-- “Assistant is typing…” indicator  
-- Auto-scroll  
-- Input lock while sending/typing  
+
+- Typewriter answer rendering
+- “Assistant is typing…” indicator
+- Auto-scroll
+- Input lock while sending/typing
 
 ### Chats sidebar
+
 - Visible only for authenticated users.
 
 ### Account FAB
+
 - Top-right — Upgrade plan / Personalization / Settings / Logout
 
 ---
@@ -32,11 +38,13 @@ Stack: React 19, TypeScript, Vite, Tailwind, TanStack Query 5, React Router 7, a
 ## Quick start
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Create `.env.development`:
+
    ```env
    VITE_API_URL=http://localhost:5119
    ```
@@ -64,15 +72,27 @@ src/
 │  ├─ chatList.ts       # chat list
 │  ├─ getChat.ts        # chat messages
 │  └─ auth.ts           # login / register / checkAuth / logout
+│  └─ updateChat.ts           # login / register / checkAuth / logout
 │
 ├─ Components/
-│  ├─ Routes/AppRoutes.tsx
-│  ├─ pages/ChatPage.tsx
-│  ├─ layout/AppShell.tsx
-│  ├─ header/TopBar.tsx
-│  ├─ sidebar/ChatSidebar.tsx
-│  ├─ composer/Composer.tsx
-│  ├─ account/AccountFab.tsx
+│  ├─ Routes/
+│  │  ├─ AppRoutes.tsx
+│  │  └─ AuthRoutes.tsx
+│  ├─ pages/
+│  │  └─ ChatPage.tsx
+│  ├─ layout/
+│  │  └─ AppShell.tsx
+│  ├─ header/
+│  │  └─ TopBar.tsx
+│  ├─ sidebar/
+│  │  ├─ ChatItemMenu.tsx
+│  │  └─ ChatSidebar.tsx
+│  ├─ composer/
+│  │  └─ Composer.tsx
+│  ├─ account/
+│  │  └─ AccountFab.tsx
+│  ├─ auth/
+│  │  └─ AuthBootstrap.tsx
 │  └─ chat/
 │     ├─ ChatArea.tsx
 │     ├─ MessageList.tsx
@@ -87,23 +107,30 @@ src/
 │  ├─ TypingBubble.tsx
 │  └─ typewriter.ts
 │
-├─ state/userState.tsx
+├─ state/
+│  └─ userState.tsx
+│
+├─ types/
+│  ├─ auth.ts
+│  └─ chat.ts
+│
 ├─ main.tsx
 ├─ Root.tsx
 ├─ index.css
 └─ App.tsx
+└─ env.development
 ```
 
 ---
 
 ## Behavior
 
-- On `/chat` without `chatId`, the frontend sends `ChatId=null`, receives a new `chatId`, navigates to `/chat/{chatId}`, and seeds the cache to avoid flicker.  
+- On `/chat` without `chatId`, the frontend sends `ChatId=null`, receives a new `chatId`, navigates to `/chat/{chatId}`, and seeds the cache to avoid flicker.
 - While awaiting a reply:
-  - Show `TypingBubble`  
-  - Lock Composer  
-  - Render text gradually (typewriter)  
-  - Then unlock input  
+  - Show `TypingBubble`
+  - Lock Composer
+  - Render text gradually (typewriter)
+  - Then unlock input
 - In guest mode:
   - Messages render and persist only within the current session (no backend history).
 
